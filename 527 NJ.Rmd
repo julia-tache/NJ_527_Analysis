@@ -1,0 +1,219 @@
+---
+title: "527 NJ"
+output: html_document
+date: "2024-07-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r load packages}
+library(tidyverse)
+```
+
+```{r contributions}
+
+contributions <- read_csv("527 Contributions_NJ_2019 - 2023.csv")
+
+contributions %>%
+  group_by(contributor_name, state) %>%
+  summarize(n = sum(contribution_amt)) %>%
+  arrange(desc(n))
+
+```
+
+```{r expenditures}
+
+expenditures <- read_csv("527 Expenditures_NJ_2019 - 2023.csv")
+
+expenditures_total <- expenditures %>%
+  group_by(org_name) %>%
+  summarize(n = sum(expenditure_amt)) %>%
+  arrange(desc(n))
+
+expenditures_total$org_name <- str_replace(expenditures_total$org_name, "MONDAY MORNING NEW JERSEY", "Monday Morning New Jersey")
+
+expenditures_total$labels <- paste0("$", prettyNum(round((expenditures_total$n/1000000), 2)), "m")
+
+expenditures_total <- expenditures_total[1:10, ]
+
+expenditures_total$norcross <- c("No", "No", "Yes", "Yes", "No", "No", "Yes", "Yes", "No", "No")
+
+expenditures_total %>%
+  ggplot(aes(x = reorder(org_name, n), y = n, fill = norcross, label = labels)) +
+  geom_col() +
+  geom_label(size = 3.5, color = "white", family = "mono", fontface = "bold", show.legend = FALSE) +
+  coord_flip() +
+  ylim(0, 26000000) +
+  scale_fill_manual(values = c("#228B22"), limits = c("Yes"), name = "Organization Linked to George Norcross") +
+  ggtitle('\nTotal Expenditures Made by "527" Political Organizations in NJ (2019-2023)') +
+  labs(caption = "Source: ProPublica 527 Explorer\nNote: Expenditures include political contributions, media, operating costs, etc.\n\ngithub: @julia-tache") +
+  theme(plot.background = element_rect(fill = "#faf3eb", color = NA),
+        panel.background = element_rect(fill = "#faf3eb", color = NA),
+        plot.title = element_text(size = 12.75, face = "bold", hjust = 0.98),
+        panel.grid.major = element_line(color = "light gray"),
+        panel.grid.minor = element_line(color = "light gray"),
+        axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 10, face = "bold", hjust = 1),
+        axis.ticks = element_blank(),
+        legend.position = "top",
+        legend.background = element_rect(fill = "#faf3eb"),
+        legend.title = element_text(face = "italic"),
+        legend.text = element_blank(),
+        text = element_text(family = "mono"))
+
+ggsave("nj_expenditures_total.png", height = 5, width = 8)
+
+```
+
+```{r NJAA PAC - Expenditures}
+
+njaa_pac <- read_csv("NJAA-PAC Expenditures_2019-2023.csv")
+
+njaa_pac$recipient_name <- str_to_title(njaa_pac$recipient_name)
+
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Armato For For Assembly", "Armato For Assembly")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Dimaso For Assembly", "Dimaio For Assembly")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Efo Louis D Greenwald For Assembly", "Efo Louis Greenwald For Assembly")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Nj Senate Democratic Majority", "Senate Democratic Majority")
+njaa_pac$recipient_name <- str_remove(njaa_pac$recipient_name, "Efo ")
+njaa_pac$recipient_name <- str_remove(njaa_pac$recipient_name, "Cte ")
+
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Louis Greenwald For Assembly", "Louis Greenwald for Assembly")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Gopal For Senate", "Vin Gopal for Senate")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Craig J Coughlin For Assembly", "Craig J. Coughlin for Assembly")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Andrzejczak Land And Milam For The First Dist.", "Andrzejczak, Land,\nand Milam for District 1")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Sweeney Burzichelli And Taliaferro", "Sweeney, Burzichelli,\nand Taliaferro for District 3")
+njaa_pac$recipient_name <- str_replace(njaa_pac$recipient_name, "Oroho For Senate", "Steven Oroho for Senate")
+
+njaa_pac_exp_total <- njaa_pac %>%
+  group_by(recipient_name) %>%
+  summarize(n = sum(expenditure_amt)) %>%
+  arrange(desc(n)) %>%
+  filter(recipient_name != "Pleasantdale Chateau") %>%
+  filter(recipient_name != "E.b. Cohen") %>%
+  filter(recipient_name != "Elias B Cohen And Associates") %>%
+  filter(recipient_name != "Diana Kasper")
+
+njaa_pac_exp_total <- njaa_pac_exp_total[1:10, ]
+
+njaa_pac_exp_total$party <- c("Democrat", "Democrat", "Republican", "Republican", "Democrat", "Democrat", "Democrat", "Democrat", "Democrat", "Republican")
+
+njaa_pac_exp_total$labels <- paste0("$", prettyNum(njaa_pac_exp_total$n, big.mark = ","))
+
+njaa_pac_exp_total %>%
+  ggplot(aes(x = reorder(recipient_name, n), y = n, fill = party, label = labels)) +
+  geom_col() +
+  geom_label(size = 3.5, color = "white", family = "mono", fontface = "bold", show.legend = FALSE) +
+  coord_flip() +
+  ylim(0, 85000) +
+  scale_fill_manual(values = c("blue", "red"), name = "Party Affiliation") +
+  ggtitle("New Jersey Apartment Association PAC's Top Campaign Expenditures (2019-2023)") +
+  labs(caption = "Source: ProPublica 527 Explorer | github: @julia-tache") +
+  theme(plot.background = element_rect(fill = "#faf3eb", color = NA),
+        panel.background = element_rect(fill = "#faf3eb", color = NA),
+        plot.title = element_text(size = 12, face = "bold", hjust = 1.3),
+        panel.grid.major = element_line(color = "light gray"),
+        panel.grid.minor = element_line(color = "light gray"),
+        axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size = 10, face = "bold", hjust = 1),
+        axis.ticks = element_blank(),
+        legend.position = "top",
+        legend.background = element_rect(fill = "#faf3eb"),
+        legend.title = element_text(size = 10, face = "italic"),
+        text = element_text(family = "mono"))
+
+ggsave("njaa_expenditures_total.png", height = 5, width = 9)
+
+```
+
+```{r Menendez - Contributions}
+
+menendez_legal_defense_fund <- read_csv("Contribution_Menendez Legal Defense Fund_932380626.csv")
+
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "President   CEO", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Executive Chairman", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Chairman", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Chairwoman", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Financial Operating Executive", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Insurance Executive", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "VP Marketing Sales", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "President Executive", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "CEO", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "President", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Owner", "Business Owner")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Business Business Owner", "Business Owner")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "lawyer", "Attorney")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "retired", "Retired")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Realtor", "Real Estate")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Real Estate Developer", "Real Estate")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Developer", "Real Estate")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Executive Manager", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "IT Administrator", "IT/Engin.eer")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "civil Engineer", "IT/Engin.eer")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Physician", "Physician/Nurse/Medical")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Registered Nurse", "Physician/Nurse/Medical")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Medical doctor", "Physician/Nurse/Medical")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "VP Marketing   Sales", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Cyber", "IT/Engin.eer")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Executive Supervisor", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Not Employed", "Unemployed")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Restaurant owner", "Business Owner")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Financial Consultant", "Consultant")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Real Estate broker", "Real Estate")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Real estate manager", "Real Estate")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Transportation Engineer", "IT/Engin.eer")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "ceo", "Executive")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "pharmacist", "Physician/Nurse/Medical")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Senior Test Engineer - Consultant", "IT/Engin.eer")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Business owner", "Business Owner")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "Engineer", "IT/Engin.eer")
+menendez_legal_defense_fund$occupation <- str_replace(menendez_legal_defense_fund$occupation, "IT/Engin.eer", "IT/Engineer")
+
+menendez_legal_defense_fund_total <- menendez_legal_defense_fund %>%
+  group_by(occupation) %>%
+  summarize(n = sum(contribution_amt)) %>%
+  arrange(desc(n))
+
+menendez_legal_defense_fund_total <- na.omit(menendez_legal_defense_fund_total)[1:6, ]
+
+menendez_legal_defense_fund_total <- menendez_legal_defense_fund_total %>%
+  filter(occupation != "Retired")
+
+menendez_legal_defense_fund_total$occupation <- factor(menendez_legal_defense_fund_total$occupation, levels = c("Executive", "Physician/Nurse/Medical", "Attorney", "Real Estate", "Retired", "Business Owner"))
+
+menendez_legal_defense_fund_total$fraction <- menendez_legal_defense_fund_total$n / sum(menendez_legal_defense_fund_total$n)
+
+menendez_legal_defense_fund_total$ymax <- cumsum(menendez_legal_defense_fund_total$fraction)
+
+menendez_legal_defense_fund_total$ymin <- c(0, head(menendez_legal_defense_fund_total$ymax, n = -1))
+
+menendez_legal_defense_fund_total$labelPosition <- (menendez_legal_defense_fund_total$ymax + menendez_legal_defense_fund_total$ymin) / 2
+
+menendez_legal_defense_fund_total$label <- paste0("$", prettyNum(menendez_legal_defense_fund_total$n, big.mark = ","))
+
+ggplot(menendez_legal_defense_fund_total, aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = occupation)) +
+  geom_rect() +
+  geom_label(x = 3.5, aes(y = labelPosition, label = label), face = "bold", family = "mono", show_guide  = FALSE) +
+  scale_fill_brewer(palette = 2, direction = -1) +
+  coord_polar(theta = "y") +
+  theme_void() +
+  ggtitle("Top Occupations of Contributors to\nMenendez Legal Defense Fund (2023)") +
+  labs(subtitle = "\nTop contributors included Lexie Norcross, Chairwoman at PhillyVoice.com,\nAlexander Norcross, Professional Development Associate at Mid Penn Bank, and\nnone other than George Norcross.", caption = "Total contributions by occupation. | Source: ProPublica 527 Explorer | github: @julia-tache") +
+  theme(plot.background = element_rect(fill = "#faf3eb", color = NA),
+        panel.background = element_rect(fill = "#faf3eb", color = NA),
+        plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        plot.caption = element_text(size = 8, hjust = 0.1),
+        legend.title = element_blank(),
+        text = element_text(family = "mono"))
+
+ggsave("menendez_defense_fund.png", height = 5, width = 7)
+
+```
+
+
+
