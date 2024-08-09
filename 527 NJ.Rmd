@@ -32,41 +32,72 @@ expenditures_total <- expenditures %>%
   summarize(n = sum(expenditure_amt)) %>%
   arrange(desc(n))
 
+# adding additional expenses from 990s and ELEC filings for GMP, GEO,and SFF
+expenditures_total[8, 2] <- expenditures_total[8, 2] + 2294214 + 1182550.73 + 769859.67 + 6121.35 + 61093.12
+expenditures_total[5, 2] <- expenditures_total[5, 2] + 1350942 + 402828 + 1169901.81
+expenditures_total[9, 2] <- (2410000 + 917141) - expenditures_total[9, 2]
+
+expenditures_total <- expenditures_total %>%
+  arrange(desc(n))
+
 expenditures_total$org_name <- str_replace(expenditures_total$org_name, "MONDAY MORNING NEW JERSEY", "Monday Morning New Jersey")
+expenditures_total$org_name <- str_replace(expenditures_total$org_name, "Stronger Fairer Forward PAC Inc.", "Stronger Fairer Forward PAC, Inc.")
+expenditures_total$org_name <- str_replace(expenditures_total$org_name, "Garden State Success Inc.", "Garden State Success, Inc.")
 
 expenditures_total$labels <- paste0("$", prettyNum(round((expenditures_total$n/1000000), 2)), "m")
 
 expenditures_total <- expenditures_total[1:10, ]
 
-expenditures_total$norcross <- c("No", "No", "Yes", "Yes", "No", "No", "Yes", "Yes", "No", "No")
+expenditures_total$norcross <- c("No", "Yes", "No", "No", "Yes", "No", "Yes", "No", "No", "No")
 
 expenditures_total %>%
   ggplot(aes(x = reorder(org_name, n), y = n, fill = norcross, label = labels)) +
   geom_col() +
-  geom_label(size = 3.5, color = "white", family = "mono", fontface = "bold", show.legend = FALSE) +
+  geom_label(size = 3.5, color = "white", family = "serif", fontface = "bold", show.legend = FALSE) +
+  geom_label(aes(x = 5, y = 17500000, label = "Every year, millions of dollars\nflow through 527s, political\norganizations unregulated by\nthe Federal Election Commission."), size = 5, family = "serif", color = "white", fontface = "bold", fill = "#228B22", show.legend = FALSE) +
   coord_flip() +
   ylim(0, 26000000) +
-  scale_fill_manual(values = c("#228B22"), limits = c("Yes"), name = "Organization Linked to George Norcross") +
-  ggtitle('\nTotal Expenditures Made by "527" Political Organizations in NJ (2019-2023)') +
-  labs(caption = "Source: ProPublica 527 Explorer\nNote: Expenditures include political contributions, media, operating costs, etc.\n\ngithub: @julia-tache") +
-  theme(plot.background = element_rect(fill = "#faf3eb", color = NA),
-        panel.background = element_rect(fill = "#faf3eb", color = NA),
-        plot.title = element_text(size = 12.75, face = "bold", hjust = 0.98),
+  scale_fill_manual(values = c("#228B22"), limits = c("Yes"), name = "Organization with Direct Link to Norcross Family") +
+  ggtitle('\nTotal New Jersey 527 Expenditures (2019-2023)') +
+  labs(caption = "Note: Expenditures by these groups include political contributions, media, operating costs, and other expenses.\nSource: ProPublica 527 Explorer | github: julia-tache") +
+  theme(plot.background = element_rect(fill = "#f9f2eb", color = NA),
+        panel.background = element_rect(fill = "#f9f2eb", color = NA),
         panel.grid.major = element_line(color = "light gray"),
         panel.grid.minor = element_line(color = "light gray"),
+        plot.title = element_text(size = 22, face = "bold", hjust = 1.2),
+        plot.subtitle = element_text(size = 12, face = "italic", hjust = -0.1),
+        plot.caption = element_text(size = 10),
         axis.text.x = element_blank(),
         axis.title = element_blank(),
-        axis.text.y = element_text(size = 10, face = "bold", hjust = 1),
+        axis.text.y = element_text(size = 10, color = "black", face = "bold", hjust = 1),
         axis.ticks = element_blank(),
         legend.position = "top",
-        legend.background = element_rect(fill = "#faf3eb"),
-        legend.title = element_text(face = "italic"),
+        legend.background = element_rect(fill = "#f9f2eb"),
+        legend.title = element_text(size = 12, face = "bold", color = "black"),
         legend.text = element_blank(),
-        text = element_text(family = "mono"))
+        text = element_text(family = "serif"))
 
-ggsave("nj_expenditures_total.png", height = 5, width = 8)
+ggsave("nj_expenditures_total.png", height = 5, width = 7.5)
 
 ```
+
+```{r Garden State Forward}
+
+gsf_expenditures <- read_csv("Expenditure_Garden State Forward_462383979.csv")
+gsf_expenditures$recipient_name <- str_replace(gsf_expenditures$recipient_name, "New Direction NJ", "New Direction New Jersey")
+gsf_expenditures$recipient_name <- str_replace(gsf_expenditures$recipient_name, "New Jersey United", "NJ United")
+
+gsf_expenditures %>%
+  group_by(recipient_name) %>%
+  summarize(n = sum(expenditure_amt)) %>%
+  arrange(desc(n))
+
+gsf_cont <- read_csv("Contribution_Garden State Forward_462383979.csv")
+
+sum(gsf_cont$contribution_amt)
+
+```
+
 
 ```{r NJAA PAC - Expenditures}
 
@@ -106,27 +137,29 @@ njaa_pac_exp_total$labels <- paste0("$", prettyNum(njaa_pac_exp_total$n, big.mar
 njaa_pac_exp_total %>%
   ggplot(aes(x = reorder(recipient_name, n), y = n, fill = party, label = labels)) +
   geom_col() +
-  geom_label(size = 3.5, color = "white", family = "mono", fontface = "bold", show.legend = FALSE) +
+  geom_label(size = 3.5, color = "white", family = "serif", fontface = "bold", show.legend = FALSE) +
   coord_flip() +
   ylim(0, 85000) +
   scale_fill_manual(values = c("blue", "red"), name = "Party Affiliation") +
-  ggtitle("New Jersey Apartment Association PAC's Top Campaign Expenditures (2019-2023)") +
-  labs(caption = "Source: ProPublica 527 Explorer | github: @julia-tache") +
-  theme(plot.background = element_rect(fill = "#faf3eb", color = NA),
-        panel.background = element_rect(fill = "#faf3eb", color = NA),
-        plot.title = element_text(size = 12, face = "bold", hjust = 1.3),
+  ggtitle("\nNew Jersey Apartment Association PAC's Top Campaign Expenditures (2019-2023)") +
+  labs(caption = "Source: ProPublica 527 Explorer | github: julia-tache") +
+  theme(plot.background = element_rect(fill = "#f9f2eb", color = NA),
+        panel.background = element_rect(fill = "#f9f2eb", color = NA),
         panel.grid.major = element_line(color = "light gray"),
         panel.grid.minor = element_line(color = "light gray"),
+        plot.title = element_text(size = 18, face = "bold", hjust = 1),
+        plot.caption = element_text(size = 10),
         axis.text.x = element_blank(),
         axis.title = element_blank(),
-        axis.text.y = element_text(size = 10, face = "bold", hjust = 1),
+        axis.text.y = element_text(size = 10, color = "black", face = "bold", hjust = 1),
         axis.ticks = element_blank(),
         legend.position = "top",
-        legend.background = element_rect(fill = "#faf3eb"),
-        legend.title = element_text(size = 10, face = "italic"),
-        text = element_text(family = "mono"))
+        legend.background = element_rect(fill = "#f9f2eb"),
+        legend.title = element_text(size = 12, face = "italic"),
+        legend.text = element_text(size = 10),
+        text = element_text(family = "serif"))
 
-ggsave("njaa_expenditures_total.png", height = 5, width = 9)
+ggsave("njaa_expenditures_total.png", height = 5, width = 9, device = 'tiff', dpi = 200)
 
 ```
 
@@ -180,10 +213,10 @@ menendez_legal_defense_fund_total <- menendez_legal_defense_fund %>%
 
 menendez_legal_defense_fund_total <- na.omit(menendez_legal_defense_fund_total)[1:6, ]
 
-menendez_legal_defense_fund_total <- menendez_legal_defense_fund_total %>%
-  filter(occupation != "Retired")
+# menendez_legal_defense_fund_total <- menendez_legal_defense_fund_total %>%
+#   filter(occupation != "Retired")
 
-menendez_legal_defense_fund_total$occupation <- factor(menendez_legal_defense_fund_total$occupation, levels = c("Executive", "Physician/Nurse/Medical", "Attorney", "Real Estate", "Retired", "Business Owner"))
+menendez_legal_defense_fund_total$occupation <- factor(menendez_legal_defense_fund_total$occupation, levels = c("Executive", "Real Estate", "Physician/Nurse/Medical", "Retired", "Attorney", "Business Owner"))
 
 menendez_legal_defense_fund_total$fraction <- menendez_legal_defense_fund_total$n / sum(menendez_legal_defense_fund_total$n)
 
@@ -197,21 +230,21 @@ menendez_legal_defense_fund_total$label <- paste0("$", prettyNum(menendez_legal_
 
 ggplot(menendez_legal_defense_fund_total, aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = occupation)) +
   geom_rect() +
-  geom_label(x = 3.5, aes(y = labelPosition, label = label), face = "bold", family = "mono", show_guide  = FALSE) +
+  geom_label(x = 3.5, aes(y = labelPosition, label = label), face = "bold", family = "serif", show_guide  = FALSE) +
   scale_fill_brewer(palette = 2, direction = -1) +
   coord_polar(theta = "y") +
   theme_void() +
-  ggtitle("Top Occupations of Contributors to\nMenendez Legal Defense Fund (2023)") +
-  labs(subtitle = "\nTop contributors included Lexie Norcross, Chairwoman at PhillyVoice.com,\nAlexander Norcross, Professional Development Associate at Mid Penn Bank, and\nnone other than George Norcross.", caption = "Total contributions by occupation. | Source: ProPublica 527 Explorer | github: @julia-tache") +
-  theme(plot.background = element_rect(fill = "#faf3eb", color = NA),
-        panel.background = element_rect(fill = "#faf3eb", color = NA),
+  ggtitle("Top Occupations of Contributors to\nMenendez Legal Defense Fund (2023-Mar 2024)") +
+  labs(subtitle = "\nTop contributors included Lexie Norcross, Chairwoman at PhillyVoice.com,\nAlexander Norcross, Professional Development Associate at Mid Penn Bank, and\nnone other than George Norcross.", caption = "Total contributions by occupation. | Source: ProPublica 527 Explorer | github: julia-tache") +
+  theme(plot.background = element_rect(fill = "#f9f2eb", color = NA),
+        panel.background = element_rect(fill = "#f9f2eb", color = NA),
         plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(size = 10),
-        plot.caption = element_text(size = 8, hjust = 0.1),
+        plot.caption = element_text(size = 10, hjust = -0.5),
         legend.title = element_blank(),
-        text = element_text(family = "mono"))
+        text = element_text(family = "serif"))
 
-ggsave("menendez_defense_fund.png", height = 5, width = 7)
+ggsave("menendez_defense_fund.png", height = 5, width = 6, device = 'tiff', dpi = 2000)
 
 ```
 
